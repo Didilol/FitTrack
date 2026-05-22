@@ -8,19 +8,32 @@ import type {
 export async function listarRotinas(): Promise<Rotina[]> {
   const db = await getDatabase();
   return db.getAllAsync<Rotina>(
-    `SELECT id, nome, descricao, data_criacao
+    `SELECT id, nome, descricao, ordem, data_criacao
        FROM rotinas_treino
-   ORDER BY data_criacao ASC`
+   ORDER BY ordem ASC, data_criacao ASC`
   );
 }
 
 export async function buscarRotinaPorId(id: number): Promise<Rotina | null> {
   const db = await getDatabase();
   const r = await db.getFirstAsync<Rotina>(
-    `SELECT id, nome, descricao, data_criacao FROM rotinas_treino WHERE id = ?`,
+    `SELECT id, nome, descricao, ordem, data_criacao FROM rotinas_treino WHERE id = ?`,
     [id]
   );
   return r ?? null;
+}
+
+export async function reordenarRotinas(idsOrdenados: number[]): Promise<void> {
+  if (idsOrdenados.length === 0) return;
+  const db = await getDatabase();
+  await db.withTransactionAsync(async () => {
+    for (let i = 0; i < idsOrdenados.length; i++) {
+      await db.runAsync(
+        `UPDATE rotinas_treino SET ordem = ? WHERE id = ?`,
+        [i, idsOrdenados[i]]
+      );
+    }
+  });
 }
 
 export async function listarExerciciosDaRotina(
@@ -64,9 +77,13 @@ export async function criarRotina(input: NovaRotinaInput): Promise<number> {
   const db = await getDatabase();
   let rotinaId = 0;
   await db.withTransactionAsync(async () => {
+    const max = await db.getFirstAsync<{ max_ordem: number | null }>(
+      `SELECT MAX(ordem) AS max_ordem FROM rotinas_treino`
+    );
+    const proximaOrdem = (max?.max_ordem ?? -1) + 1;
     const res = await db.runAsync(
-      `INSERT INTO rotinas_treino (nome, descricao) VALUES (?, ?)`,
-      [input.nome.trim(), input.descricao?.trim() || null]
+      `INSERT INTO rotinas_treino (nome, descricao, ordem) VALUES (?, ?, ?)`,
+      [input.nome.trim(), input.descricao?.trim() || null, proximaOrdem]
     );
     rotinaId = res.lastInsertRowId;
 

@@ -44,7 +44,7 @@ export default function RotinasScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <SafeAreaView edges={[]} className="flex-1 bg-bg">
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-text text-2xl font-bold">Rotinas</Text>

@@ -4,6 +4,7 @@ export interface Rotina {
   id: number;
   nome: string;
   descricao: string | null;
+  ordem: number;
   data_criacao: string;
 }
 

@@ -32,6 +32,29 @@ async function applyMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
   );
   const current = row?.version ?? 0;
   if (current === SCHEMA_VERSION) return;
+
+  if (current < 2) {
+    const colsRotinas = await db.getAllAsync<{ name: string }>(
+      `PRAGMA table_info(rotinas_treino)`
+    );
+    if (!colsRotinas.some((c) => c.name === 'ordem')) {
+      await db.execAsync(
+        `ALTER TABLE rotinas_treino ADD COLUMN ordem INTEGER NOT NULL DEFAULT 0`
+      );
+      await db.execAsync(
+        `UPDATE rotinas_treino SET ordem = id WHERE ordem = 0`
+      );
+    }
+    const colsSeries = await db.getAllAsync<{ name: string }>(
+      `PRAGMA table_info(historico_series)`
+    );
+    if (!colsSeries.some((c) => c.name === 'status')) {
+      await db.execAsync(
+        `ALTER TABLE historico_series ADD COLUMN status TEXT NOT NULL DEFAULT 'completed'`
+      );
+    }
+  }
+
   await db.runAsync(
     'INSERT OR REPLACE INTO _schema_version (version) VALUES (?)',
     [SCHEMA_VERSION]

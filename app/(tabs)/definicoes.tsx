@@ -1,6 +1,14 @@
 import { useState } from 'react';
-import { ScrollView, Text, View, Alert } from 'react-native';
+import {
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -12,6 +20,10 @@ import {
   importarBackup,
   partilharBackup,
 } from '@/services/backup';
+
+const FEEDBACK_EMAIL = 'diogenes.edc@gmail.com';
+const APP_VERSION =
+  (Constants.expoConfig?.version as string | undefined) ?? '0.1.0';
 
 export default function DefinicoesScreen() {
   const duracao = useSettingsStore((s) => s.duracaoDescansoPadrao);
@@ -94,9 +106,33 @@ export default function DefinicoesScreen() {
     );
   }
 
+  async function enviarFeedback(tipo: 'bug' | 'sugestao') {
+    const assunto =
+      tipo === 'bug'
+        ? `[FitTrack v${APP_VERSION} Beta] Bug report`
+        : `[FitTrack v${APP_VERSION} Beta] Sugestão`;
+    const corpo =
+      'Descreve aqui o que se passou ou a tua ideia:\n\n\n' +
+      `— Versão: ${APP_VERSION} (Beta)\n` +
+      `— Plataforma: ${Constants.platform?.ios ? 'iOS' : 'Android'}\n`;
+    const url = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(
+      assunto
+    )}&body=${encodeURIComponent(corpo)}`;
+    try {
+      const ok = await Linking.canOpenURL(url);
+      if (!ok) throw new Error('App de e-mail não disponível');
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        'Sem app de e-mail',
+        `Envia para ${FEEDBACK_EMAIL} manualmente.`
+      );
+    }
+  }
+
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 12 }}>
+    <SafeAreaView edges={[]} className="flex-1 bg-bg">
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 80 }}>
         <Text className="text-text text-2xl font-bold mb-2">Definições</Text>
 
         <Card>
@@ -155,6 +191,55 @@ export default function DefinicoesScreen() {
           <Button variant="danger" size="md" onPress={confirmarReset}>
             Reset completo
           </Button>
+        </Card>
+
+        <Card>
+          <View className="flex-row items-center justify-between mb-1">
+            <Text className="text-text font-semibold">Sobre</Text>
+            <View className="bg-accent/20 border border-accent px-2 py-0.5 rounded-full">
+              <Text className="text-accent text-[10px] font-bold uppercase tracking-wider">
+                Beta de testes
+              </Text>
+            </View>
+          </View>
+          <Text className="text-muted text-sm mb-3">
+            FitTrack Local · versão {APP_VERSION}
+          </Text>
+          <Text className="text-muted text-sm mb-3">
+            Estás a usar uma versão de testes. Envia bugs e sugestões diretamente
+            para o autor:
+          </Text>
+          <Pressable
+            onPress={() => enviarFeedback('bug')}
+            hitSlop={6}
+            className="mb-2"
+          >
+            <Text className="text-accent text-sm font-semibold">
+              ✉  {FEEDBACK_EMAIL}
+            </Text>
+          </Pressable>
+          <View className="flex-row gap-2 mt-2">
+            <View className="flex-1">
+              <Button
+                variant="secondary"
+                size="md"
+                fullWidth
+                onPress={() => enviarFeedback('bug')}
+              >
+                Reportar bug
+              </Button>
+            </View>
+            <View className="flex-1">
+              <Button
+                variant="secondary"
+                size="md"
+                fullWidth
+                onPress={() => enviarFeedback('sugestao')}
+              >
+                Enviar sugestão
+              </Button>
+            </View>
+          </View>
         </Card>
       </ScrollView>
     </SafeAreaView>

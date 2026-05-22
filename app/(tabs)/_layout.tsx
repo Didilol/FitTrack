@@ -1,7 +1,9 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '@/theme/colors';
+import { ActiveWorkoutBanner } from '@/components/workout/ActiveWorkoutBanner';
+import { useActiveWorkoutStore } from '@/stores/activeWorkoutStore';
 
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
   return (
@@ -19,8 +21,14 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const bottomPad = Math.max(insets.bottom, 8);
+  const treinoEmCurso = useActiveWorkoutStore((s) => s.dataInicio !== null);
 
   return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <SafeAreaView edges={['top']} style={{ backgroundColor: colors.bg }}>
+        {treinoEmCurso ? <ActiveWorkoutBanner /> : null}
+      </SafeAreaView>
+      <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         tabBarStyle: {
@@ -76,5 +84,7 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+      </View>
+    </View>
   );
 }

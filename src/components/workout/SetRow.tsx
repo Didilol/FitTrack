@@ -41,6 +41,14 @@ export const SetRow = memo(function SetRow({
   const isTempo = tipoMedicao === 'tempo';
   const concluido = serie.concluido;
 
+  const phCarga = serie.cargaAnterior != null ? String(serie.cargaAnterior) : 'kg';
+  const phReps = serie.repsAnteriores != null ? String(serie.repsAnteriores) : 'reps';
+  const phDuracao = serie.duracaoAnterior != null ? String(serie.duracaoAnterior) : 's';
+
+  const podeConcluir = isTempo
+    ? serie.duracao !== '' || serie.duracaoAnterior != null
+    : serie.reps !== '' || serie.repsAnteriores != null;
+
   return (
     <View
       className={[
@@ -69,7 +77,7 @@ export const SetRow = memo(function SetRow({
           <TextInput
             value={serie.carga}
             onChangeText={onChangeCarga}
-            placeholder="kg"
+            placeholder={phCarga}
             placeholderTextColor={colors.muted}
             keyboardType="decimal-pad"
             selectTextOnFocus
@@ -87,7 +95,7 @@ export const SetRow = memo(function SetRow({
         <TextInput
           value={isTempo ? serie.duracao : serie.reps}
           onChangeText={isTempo ? onChangeDuracao : onChangeReps}
-          placeholder={isTempo ? 's' : 'reps'}
+          placeholder={isTempo ? phDuracao : phReps}
           placeholderTextColor={colors.muted}
           keyboardType="number-pad"
           selectTextOnFocus
@@ -102,6 +110,12 @@ export const SetRow = memo(function SetRow({
 
       <Pressable
         onPress={() => {
+          if (!podeConcluir && !concluido) {
+            Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Warning
+            ).catch(() => {});
+            return;
+          }
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(
             () => {}
           );
@@ -111,7 +125,9 @@ export const SetRow = memo(function SetRow({
           'w-11 h-11 items-center justify-center rounded-lg border',
           concluido
             ? 'bg-accent border-accent'
-            : 'bg-surface-2 border-border',
+            : podeConcluir
+              ? 'bg-surface-2 border-border'
+              : 'bg-surface-2 border-border opacity-40',
         ].join(' ')}
         hitSlop={6}
       >

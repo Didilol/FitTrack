@@ -23,6 +23,8 @@ export interface ExercicioAtivo {
   alternativas?: string | null;
   notas?: string | null;
   series: SerieAtiva[];
+  seriesAlvo: number;
+  pulado: boolean;
 }
 
 interface RestTimer {
@@ -55,6 +57,8 @@ interface ActiveWorkoutState {
   alternarConcluido: (exercicioId: string, serieId: string) => void;
   adicionarSerie: (exercicioId: string) => void;
   removerSerie: (exercicioId: string, serieId: string) => void;
+  removerUltimaSerie: (exercicioId: string) => boolean;
+  alternarPularExercicio: (exercicioId: string) => void;
   iniciarDescanso: (segundos?: number) => void;
   tickDescanso: () => void;
   cancelarDescanso: () => void;
@@ -107,6 +111,7 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set, get) => ({
 
   alternarConcluido: (exercicioId, serieId) => {
     let virouConcluido = false;
+    let bloqueado = false;
     set((state) => ({
       exercicios: state.exercicios.map((ex) => {
         if (ex.id !== exercicioId) return ex;
@@ -114,12 +119,37 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set, get) => ({
           ...ex,
           series: ex.series.map((s) => {
             if (s.id !== serieId) return s;
-            virouConcluido = !s.concluido;
-            return { ...s, concluido: virouConcluido };
+            if (s.concluido) {
+              virouConcluido = false;
+              return { ...s, concluido: false };
+            }
+            const isTempo = ex.tipoMedicao === 'tempo';
+            const valorVisivelReps = s.reps || (s.repsAnteriores != null ? String(s.repsAnteriores) : '');
+            const valorVisivelCarga = s.carga || (s.cargaAnterior != null ? String(s.cargaAnterior) : '');
+            const valorVisivelDuracao = s.duracao || (s.duracaoAnterior != null ? String(s.duracaoAnterior) : '');
+            const podeConcluir = isTempo
+              ? valorVisivelDuracao !== ''
+              : valorVisivelReps !== '';
+            if (!podeConcluir) {
+              bloqueado = true;
+              return s;
+            }
+            virouConcluido = true;
+            return {
+              ...s,
+              concluido: true,
+              carga: isTempo ? s.carga : valorVisivelCarga,
+              reps: isTempo ? s.reps : valorVisivelReps,
+              duracao: isTempo ? valorVisivelDuracao : s.duracao,
+            };
           }),
         };
       }),
     }));
+    if (bloqueado) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     if (virouConcluido) get().iniciarDescanso();
   },
@@ -159,6 +189,34 @@ export const useActiveWorkoutStore = create<ActiveWorkoutState>((set, get) => ({
         return { ...ex, series };
       }),
     })),
+
+  removerUltimaSerie: (exercicioId) => {
+    const ex = get().exercicios.find((e) => e.id === exercicioId);
+    if (!ex) return false;
+    if (ex.series.length <= 1) return false;
+    const ultima = ex.series[ex.series.length - 1];
+    if (ultima.concluido) return false;
+    set((state) => ({
+      exercicios: state.exercicios.map((e) => {
+        if (e.id !== exercicioId) return e;
+        const series = e.series
+          .slice(0, -1)
+          .map((s, i) => ({ ...s, numeroSerie: i + 1 }));
+        return { ...e, series };
+      }),
+    }));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    return true;
+  },
+
+  alternarPularExercicio: (exercicioId) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    set((state) => ({
+      exercicios: state.exercicios.map((ex) =>
+        ex.id !== exercicioId ? ex : { ...ex, pulado: !ex.pulado }
+      ),
+    }));
+  },
 
   iniciarDescanso: (segundos) => {
     const dur = segundos ?? get().duracaoDescansoPadrao;
@@ -203,3 +261,13 @@ export const selectRestTimer = (s: ActiveWorkoutState) => s.restTimer;
 export const selectTreinoEmCurso = (s: ActiveWorkoutState) =>
   s.dataInicio !== null;
 export const selectExercicios = (s: ActiveWorkoutState) => s.exercicios;
+
+export type ExercicioStatus = 'completed' | 'skipped' | 'pending';
+
+export function getExercicioStatus(ex: ExercicioAtivo): ExercicioStatus {
+  if (ex.pulado) return 'skipped';
+  if (ex.series.length > 0 && ex.series.every((s) => s.concluido)) {
+    return 'completed';
+  }
+  return 'pending';
+}

@@ -25,7 +25,7 @@ export default function HistoricoScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-bg">
+    <SafeAreaView edges={[]} className="flex-1 bg-bg">
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={

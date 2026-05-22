@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const DDL = `
   PRAGMA foreign_keys = ON;
@@ -14,6 +14,7 @@ export const DDL = `
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     nome          TEXT NOT NULL,
     descricao     TEXT,
+    ordem         INTEGER NOT NULL DEFAULT 0,
     data_criacao  TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
@@ -58,6 +59,8 @@ export const DDL = `
     repeticoes            INTEGER NOT NULL DEFAULT 0,
     duracao_segundos      REAL,
     concluido             INTEGER NOT NULL DEFAULT 0,
+    status                TEXT NOT NULL DEFAULT 'completed'
+                          CHECK(status IN ('completed','skipped')),
     FOREIGN KEY (historico_treino_id) REFERENCES historico_treinos(id) ON DELETE CASCADE,
     FOREIGN KEY (exercicio_id)        REFERENCES exercicios(id)        ON DELETE RESTRICT
   );

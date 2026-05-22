@@ -46,6 +46,8 @@ export async function montarExerciciosAtivos(
       alternativas: item.alternativas,
       notas: item.notas,
       series,
+      seriesAlvo: numSeries,
+      pulado: false,
     };
   });
 }

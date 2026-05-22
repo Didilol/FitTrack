@@ -36,6 +36,16 @@ export async function gravarHistoricoTreino(input: {
     historicoId = res.lastInsertRowId;
 
     for (const ex of input.exercicios) {
+      if (ex.pulado) {
+        await db.runAsync(
+          `INSERT INTO historico_series
+             (historico_treino_id, exercicio_id, numero_serie,
+              carga, repeticoes, duracao_segundos, concluido, status)
+           VALUES (?, ?, 0, 0, 0, NULL, 0, 'skipped')`,
+          [historicoId, ex.exercicioId]
+        );
+        continue;
+      }
       const seriesConcluidas = ex.series.filter((s) => s.concluido);
       for (const s of seriesConcluidas) {
         const carga = parseFloat(s.carga.replace(',', '.')) || 0;
@@ -45,8 +55,8 @@ export async function gravarHistoricoTreino(input: {
         await db.runAsync(
           `INSERT INTO historico_series
              (historico_treino_id, exercicio_id, numero_serie,
-              carga, repeticoes, duracao_segundos, concluido)
-           VALUES (?, ?, ?, ?, ?, ?, 1)`,
+              carga, repeticoes, duracao_segundos, concluido, status)
+           VALUES (?, ?, ?, ?, ?, ?, 1, 'completed')`,
           [
             historicoId,
             ex.exercicioId,

@@ -38,17 +38,24 @@ export default function RotinaDetalhe() {
 
   const iniciarTreinoStore = useActiveWorkoutStore((s) => s.iniciarTreino);
   const treinoEmCurso = useActiveWorkoutStore((s) => s.dataInicio !== null);
+  const rotinaIdEmCurso = useActiveWorkoutStore((s) => s.rotinaId);
+  const ehMesmaRotinaEmCurso =
+    treinoEmCurso && rotinaIdEmCurso === rotinaId;
   const [a_iniciar, setAIniciar] = useState(false);
   const insets = useSafeAreaInsets();
 
   async function iniciarTreino() {
     if (!rotina) return;
+    if (ehMesmaRotinaEmCurso) {
+      router.push('/treino/ativo');
+      return;
+    }
     if (treinoEmCurso) {
       Alert.alert(
         'Treino em curso',
-        'Já existe um treino ativo. Termina ou descarta-o primeiro.',
+        'Já existe um treino ativo de outra rotina. Termina ou descarta-o primeiro.',
         [
-          { text: 'Continuar treino', onPress: () => router.push('/treino/ativo') },
+          { text: 'Retomar treino', onPress: () => router.push('/treino/ativo') },
           { text: 'Cancelar', style: 'cancel' },
         ]
       );
@@ -183,7 +190,7 @@ export default function RotinaDetalhe() {
               loading={a_iniciar}
               onPress={iniciarTreino}
             >
-              Iniciar treino
+              {ehMesmaRotinaEmCurso ? 'Retomar treino' : 'Iniciar treino'}
             </Button>
           </View>
         </View>

@@ -10,7 +10,10 @@ import {
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useActiveWorkoutStore } from '@/stores/activeWorkoutStore';
+import {
+  getExercicioStatus,
+  useActiveWorkoutStore,
+} from '@/stores/activeWorkoutStore';
 import { useInterval } from '@/hooks/useInterval';
 import { Button } from '@/components/ui/Button';
 import { ExerciseBlock } from '@/components/workout/ExerciseBlock';
@@ -39,14 +42,24 @@ export default function TreinoAtivo() {
     }
   }, [dataInicio, router]);
 
-  const totalConcluidas = useMemo(
-    () =>
-      exercicios.reduce(
-        (acc, ex) => acc + ex.series.filter((s) => s.concluido).length,
-        0
-      ),
-    [exercicios]
-  );
+  const { totalConcluidas, exerciciosPendentes, podeFinalizar } = useMemo(() => {
+    let concluidas = 0;
+    let pendentes = 0;
+    for (const ex of exercicios) {
+      const status = getExercicioStatus(ex);
+      if (status === 'pending') pendentes++;
+      if (!ex.pulado) {
+        for (const s of ex.series) {
+          if (s.concluido) concluidas++;
+        }
+      }
+    }
+    return {
+      totalConcluidas: concluidas,
+      exerciciosPendentes: pendentes,
+      podeFinalizar: exercicios.length > 0 && pendentes === 0,
+    };
+  }, [exercicios]);
 
   function confirmarDescartar() {
     Alert.alert(
@@ -67,18 +80,18 @@ export default function TreinoAtivo() {
   }
 
   async function finalizar() {
-    if (totalConcluidas === 0) {
+    if (!podeFinalizar) {
       Alert.alert(
-        'Sem séries marcadas',
-        'Marca pelo menos uma série como concluída antes de finalizar.'
+        'Exercícios por resolver',
+        `Ainda há ${exerciciosPendentes} exercício${exerciciosPendentes > 1 ? 's' : ''} sem todas as séries marcadas. Marca o check de todas as séries ou pula o exercício para finalizar.`
       );
       return;
     }
 
     Alert.alert(
       'Finalizar treino?',
-      `${totalConcluidas} série${totalConcluidas > 1 ? 's' : ''} concluída${
-        totalConcluidas > 1 ? 's' : ''
+      `${totalConcluidas} série${totalConcluidas === 1 ? '' : 's'} concluída${
+        totalConcluidas === 1 ? '' : 's'
       } em ${formatDuracao(duracaoSegundos)}.`,
       [
         { text: 'Cancelar', style: 'cancel' },
@@ -112,7 +125,7 @@ export default function TreinoAtivo() {
   if (!dataInicio) return null;
 
   return (
-    <SafeAreaView edges={['bottom']} className="flex-1 bg-bg">
+    <SafeAreaView edges={['top', 'bottom']} className="flex-1 bg-bg">
       <Stack.Screen options={{ headerShown: false }} />
 
       <View className="px-4 pt-3 pb-2 flex-row items-center justify-between bg-bg border-b border-border">
@@ -134,9 +147,20 @@ export default function TreinoAtivo() {
         <Pressable
           onPress={finalizar}
           hitSlop={8}
-          className="px-3 h-10 items-center justify-center rounded-lg bg-accent"
+          disabled={!podeFinalizar}
+          className={[
+            'px-3 h-10 items-center justify-center rounded-lg',
+            podeFinalizar ? 'bg-accent' : 'bg-surface-2 border border-border',
+          ].join(' ')}
         >
-          <Text className="text-bg font-bold text-sm">Finalizar</Text>
+          <Text
+            className={[
+              'font-bold text-sm',
+              podeFinalizar ? 'text-bg' : 'text-muted',
+            ].join(' ')}
+          >
+            Finalizar
+          </Text>
         </Pressable>
       </View>
 
