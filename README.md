@@ -120,6 +120,8 @@ As fotos físicas (ficheiros `.jpg`) **não** vão no JSON — só os caminhos. 
 - PWA / Web build
 - Exportar histórico para CSV
 - Suporte multi-utilizador no mesmo aparelho
+- Pré-Visualização dos exercícios
+- Porte para iOS
 
 ## Feedback
 
